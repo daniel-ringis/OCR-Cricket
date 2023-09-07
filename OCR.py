@@ -4,62 +4,37 @@ import pytesseract
 
 # Mention the installed location of Tesseract-OCR in your system
 pytesseract.pytesseract.tesseract_cmd = "C:\Program Files\Tesseract-OCR\\tesseract.exe"
-
+f = open("scorecard.csv", "w")
+for frame in range(1, 29033):
+#
+	frame = str(frame).zfill(5)
+	#print(frame)
+	filename = "F:\Cricket\ODI Frames\\ODI_"+str(frame)+".png"
+	#print(filename)
 # Read image from which text needs to be extracted
-img = cv2.imread("ODI_00427.png")
+	img = cv2.imread(filename)
 
-# Preprocessing the image starts
+	# #Batting team = 238, 620, 77, 35
+	# #Innings Score = 323, 620, 85, 35
+	# #Overs = 260, 657, 141, 30
+	r = [323, 620, 85, 35]
+	score_roi = img[int(r[1]):int(r[1]+r[3]),int(r[0]):int(r[0]+r[2])]
 
-# Convert the image to gray scale
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	gray_roi = cv2.cvtColor(score_roi, cv2.COLOR_BGR2GRAY)
 
-# Performing OTSU threshold
-ret, thresh1 = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY_INV)
-#cv2.imshow("window",thresh1)
-# Specify structure shape and kernel size.
-# Kernel size increases or decreases the area
-# of the rectangle to be detected.
-# A smaller value like (10, 10) will detect
-# each word instead of a sentence.
-rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+	ret, thresh_roi = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY_INV )
 
-# Applying dilation on the threshold image
-dilation = cv2.dilate(thresh1, rect_kernel, iterations = 1)
+	# #cv2.imshow("window", thresh_roi)
+	# #cv2.waitKey()
 
-# Finding contours
-contours, hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL,
-												cv2.CHAIN_APPROX_NONE)
+	text = pytesseract.image_to_string(thresh_roi)
+	score = text.strip()
+	f = open("scorecard.csv", "a")
+	print(str(frame)+","+score)
+	f.write(str(frame)+","+score+"\n")
+	f.close()
 
-# Creating a copy of image
-im2 = img.copy()
 
-# A text file is created and flushed
-file = open("recognized.txt", "w+")
-file.write("")
-file.close()
 
-# Looping through the identified contours
-# Then rectangular part is cropped and passed on
-# to pytesseract for extracting text from it
-# Extracted text is then written into the text file
-for cnt in contours:
-	x, y, w, h = cv2.boundingRect(cnt)
-	
-	# Drawing a rectangle on copied image
-	rect = cv2.rectangle(im2, (x, y), (x + w, y + h), (0, 255, 0), 2)
-	
-	# Cropping the text block for giving input to OCR
-	cropped = im2[y:y + h, x:x + w]
-	
-	# Open the file in append mode
-	file = open("recognized.txt", "a")
-	
-	# Apply OCR on the cropped image
-	text = pytesseract.image_to_string(cropped)
-	
-	# Appending the text into file
-	file.write(text)
-	file.write("\n")
-	
-	# Close the file
-	file.close
+
+
